@@ -862,7 +862,16 @@ origins = ["*"]
 # get current directory
 try:
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    ui_path = os.path.join(current_dir, "_experimental", "out")
+    # Check for custom UI path from environment variable
+    custom_ui_path = os.getenv("LITELLM_UI_PATH")
+    if custom_ui_path:
+        # Support both absolute and relative paths (relative to proxy directory)
+        if os.path.isabs(custom_ui_path):
+            ui_path = custom_ui_path
+        else:
+            ui_path = os.path.join(current_dir, custom_ui_path)
+    else:
+        ui_path = os.path.join(current_dir, "_experimental", "out")
     litellm_asset_prefix = "/litellm-asset-prefix"
 
     # Only modify files if a custom server root path is set

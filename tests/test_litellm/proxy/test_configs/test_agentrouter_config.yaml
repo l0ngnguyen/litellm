@@ -1,0 +1,16 @@
+model_list:
+  - model_name: agentrouter/claude-3-5-haiku-20241022
+    litellm_params:
+      model: agentrouter/claude-3-5-haiku-20241022
+      custom_llm_provider: agentrouter
+      api_key: os.environ/AGENTROUTER_API_KEY
+    model_info:
+      description: test claude model via AgentRouter
+  - model_name: agentrouter/gpt-5
+    litellm_params:
+      model: agentrouter/gpt-5
+      custom_llm_provider: agentrouter
+      api_key: os.environ/AGENTROUTER_API_KEY
+    model_info:
+      description: test openai model via AgentRouter
+

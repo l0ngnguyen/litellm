@@ -344,7 +344,8 @@ LITELLM_CHAT_PROVIDERS = [
     "vercel_ai_gateway",
     "wandb",
     "ovhcloud",
-    "lemonade"
+    "lemonade",
+    "agentrouter",
 ]
 
 LITELLM_EMBEDDING_PROVIDERS_SUPPORTING_INPUT_ARRAY_OF_TOKENS = [
@@ -480,6 +481,8 @@ openai_compatible_endpoints: List = [
     "https://api.hyperbolic.xyz/v1",
     "https://ai-gateway.vercel.sh/v1",
     "https://api.inference.wandb.ai/v1",
+    "https://agentrouter.org/v1",
+    "agentrouter.org/v1",
 ]
 
 

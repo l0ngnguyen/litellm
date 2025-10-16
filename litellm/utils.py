@@ -5121,9 +5121,9 @@ def json_schema_type(python_type_name: str):
     return python_to_json_schema_types.get(python_type_name, "string")
 
 
-def function_to_dict(input_function):  # noqa: C901
+def function_to_dict(input_function) -> dict:  # noqa: C901
     """Using type hints and numpy-styled docstring,
-    produce a dictionnary usable for OpenAI function calling
+    produce a dictionary usable for OpenAI function calling
 
     Parameters
     ----------
@@ -7026,6 +7026,8 @@ class ProviderConfigManager:
             return litellm.TogetherAIConfig()
         elif litellm.LlmProviders.OPENROUTER == provider:
             return litellm.OpenrouterConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            return litellm.AgentrouterConfig(model=model)
         elif litellm.LlmProviders.VERCEL_AI_GATEWAY == provider:
             return litellm.VercelAIGatewayConfig()
         elif litellm.LlmProviders.COMETAPI == provider:
@@ -7244,6 +7246,9 @@ class ProviderConfigManager:
             return litellm.DeepinfraRerankConfig()
         elif litellm.LlmProviders.NVIDIA_NIM == provider:
             return litellm.NvidiaNimRerankConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: default to Cohere rerank semantics via AgentRouter base
+            return litellm.CohereRerankConfig()
         return litellm.CohereRerankConfig()
 
     @staticmethod
@@ -7266,6 +7271,8 @@ class ProviderConfigManager:
                 )
 
                 return VertexAIPartnerModelsAnthropicMessagesConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            return litellm.AgentrouterConfig(model=model)
         return None
 
     @staticmethod
@@ -7294,6 +7301,9 @@ class ProviderConfigManager:
             )
 
             return HostedVLLMAudioTranscriptionConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: treat as OpenAI Whisper-style via AgentRouter base
+            return litellm.OpenAIWhisperAudioTranscriptionConfig()
         return None
 
     @staticmethod
@@ -7311,6 +7321,9 @@ class ProviderConfigManager:
                 return litellm.AzureOpenAIResponsesAPIConfig()
         elif litellm.LlmProviders.LITELLM_PROXY == provider:
             return litellm.LiteLLMProxyResponsesAPIConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: treat as OpenAI Responses API via AgentRouter base
+            return litellm.OpenAIResponsesAPIConfig()
         return None
 
     @staticmethod
@@ -7393,6 +7406,9 @@ class ProviderConfigManager:
         provider: LlmProviders,
     ) -> Optional[BaseImageVariationConfig]:
         if LlmProviders.OPENAI == provider:
+            return litellm.OpenAIImageVariationConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: use OpenAI image variations via AgentRouter base
             return litellm.OpenAIImageVariationConfig()
         elif LlmProviders.TOPAZ == provider:
             return litellm.TopazImageVariationConfig()
@@ -7492,6 +7508,13 @@ class ProviderConfigManager:
             )
 
             return get_openai_image_generation_config(model)
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: use OpenAI image generation semantics via AgentRouter base
+            from litellm.llms.openai.image_generation import (
+                get_openai_image_generation_config,
+            )
+
+            return get_openai_image_generation_config(model)
         elif LlmProviders.AZURE == provider:
             from litellm.llms.azure.image_generation import (
                 get_azure_image_generation_config,
@@ -7559,6 +7582,13 @@ class ProviderConfigManager:
         provider: LlmProviders,
     ) -> Optional[BaseImageEditConfig]:
         if LlmProviders.OPENAI == provider:
+            from litellm.llms.openai.image_edit.transformation import (
+                OpenAIImageEditConfig,
+            )
+
+            return OpenAIImageEditConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: use OpenAI image edit semantics via AgentRouter base
             from litellm.llms.openai.image_edit.transformation import (
                 OpenAIImageEditConfig,
             )
