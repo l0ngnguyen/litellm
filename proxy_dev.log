@@ -1,0 +1,243 @@
+2025-10-18 10:36:57,251 - litellm_proxy_extras - INFO - Running prisma migrate deploy
+2025-10-18 10:36:58,830 - litellm_proxy_extras - INFO - prisma migrate deploy stdout: Environment variables loaded from ../../../../../.env
+Prisma schema loaded from schema.prisma
+Datasource "client": PostgreSQL database "litellm", schema "public" at "localhost:5432"
+
+71 migrations found in prisma/migrations
+
+Applying migration `20251018095312_baseline_diff`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 20251018095312_baseline_diff/
+    └─ migration.sql
+      
+All migrations have been successfully applied.
+
+2025-10-18 10:36:58,830 - litellm_proxy_extras - INFO - prisma migrate deploy completed
+2025-10-18 10:36:58,830 - litellm_proxy_extras - INFO - Running post-migration sanity check...
+2025-10-18 10:36:58,831 - litellm_proxy_extras - INFO - Generating migration diff between DB and schema.prisma...
+2025-10-18 10:37:00,348 - litellm_proxy_extras - INFO - Migration diff created at /home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/litellm_proxy_extras/migrations/20251018103658_baseline_diff/migration.sql
+2025-10-18 10:37:00,348 - litellm_proxy_extras - INFO - Running prisma db execute to apply the migration diff...
+2025-10-18 10:37:01,938 - litellm_proxy_extras - INFO - prisma db execute stdout: Script executed successfully.
+
+2025-10-18 10:37:01,938 - litellm_proxy_extras - INFO - ✅ Migration diff applied successfully
+2025-10-18 10:37:01,938 - litellm_proxy_extras - INFO - ✅ Post-migration sanity check completed
+INFO:     Started server process [628832]
+INFO:     Waiting for application startup.
+
+   ██╗     ██╗████████╗███████╗██╗     ██╗     ███╗   ███╗
+   ██║     ██║╚══██╔══╝██╔════╝██║     ██║     ████╗ ████║
+   ██║     ██║   ██║   █████╗  ██║     ██║     ██╔████╔██║
+   ██║     ██║   ██║   ██╔══╝  ██║     ██║     ██║╚██╔╝██║
+   ███████╗██║   ██║   ███████╗███████╗███████╗██║ ╚═╝ ██║
+   ╚══════╝╚═╝   ╚═╝   ╚══════╝╚══════╝╚══════╝╚═╝     ╚═╝
+
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:4000 (Press CTRL+C to quit)
+
+Execution of job "ProxyConfig.add_deployment (trigger: interval[0:00:10], next run at: 2025-10-18 14:11:55 +07)" skipped: maximum number of running instances reached (1)
+Run time of job "ProxyConfig.get_credentials (trigger: interval[0:00:10], next run at: 2025-10-18 14:12:25 +07)" was missed by 0:00:07.510752
+[92m14:12:23 - LiteLLM Proxy:ERROR[0m: utils.py:1825 - LiteLLM Prisma Client Exception get_generic_data: 
+[92m14:12:23 - LiteLLM Proxy:ERROR[0m: proxy_server.py:2760 - Error adding/deleting model to llm_router: 
+Traceback (most recent call last):
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpcore/_async/connection.py", line 103, in handle_async_request
+    return await self._connection.handle_async_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpcore/_async/http11.py", line 136, in handle_async_request
+    raise exc
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpcore/_async/http11.py", line 86, in handle_async_request
+    await self._send_request_headers(**kwargs)
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpcore/_async/http11.py", line 150, in _send_request_headers
+    await self._send_event(event, timeout=timeout)
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpcore/_async/http11.py", line 166, in _send_event
+    await self._network_stream.write(bytes_to_send, timeout=timeout)
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpcore/_backends/anyio.py", line 48, in write
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.WriteTimeout
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/long/Workspace/litellm/litellm/proxy/proxy_server.py", line 2754, in _update_llm_router
+    await self._delete_deployment(db_models=new_models)
+  File "/home/long/Workspace/litellm/litellm/proxy/proxy_server.py", line 2608, in _delete_deployment
+    config = await self.get_config(config_file_path=user_config_file_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/litellm/proxy/proxy_server.py", line 1818, in get_config
+    config = await self._update_config_from_db(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/litellm/proxy/proxy_server.py", line 3118, in _update_config_from_db
+    responses = await asyncio.gather(*_tasks)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/litellm/proxy/db/log_db_metrics.py", line 99, in wrapper
+    raise e
+  File "/home/long/Workspace/litellm/litellm/proxy/db/log_db_metrics.py", line 42, in wrapper
+    result = await func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/backoff/_async.py", line 151, in retry
+    ret = await target(*args, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/litellm/proxy/utils.py", line 1839, in get_generic_data
+    raise e
+  File "/home/long/Workspace/litellm/litellm/proxy/utils.py", line 1813, in get_generic_data
+    response = await self.db.litellm_config.find_first(  # type: ignore
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/prisma/actions.py", line 12838, in find_first
+    resp = await self._client._execute(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/prisma/_base_client.py", line 543, in _execute
+    return await self._engine.query(builder.build(), tx_id=self._tx_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/prisma/engine/_query.py", line 402, in query
+    return await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/prisma/engine/_http.py", line 217, in request
+    response = await self.session.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/prisma/_async_http.py", line 26, in request
+    return Response(await self.session.request(method, url, **kwargs))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/long/Workspace/litellm/.venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.WriteTimeout
+Run time of job "ProxyConfig.get_credentials (trigger: interval[0:00:10], next run at: 2025-10-19 02:38:05 +07)" was missed by 0:00:04.834552
+{"timestamp":"2025-10-19T13:47:36.058734Z","level":"ERROR","fields":{"message":"Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: \"FATAL\", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: \"terminating connection due to administrator command\", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some(\"postgres.c\"), line: Some(3211), routine: Some(\"ProcessInterrupts\") }) }"},"target":"quaint::connector::postgres::native"}
+{"timestamp":"2025-10-19T13:47:36.058585Z","level":"ERROR","fields":{"message":"Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: \"FATAL\", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: \"terminating connection due to administrator command\", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some(\"postgres.c\"), line: Some(3211), routine: Some(\"ProcessInterrupts\") }) }"},"target":"quaint::connector::postgres::native"}
+{"timestamp":"2025-10-19T13:47:36.059168Z","level":"ERROR","fields":{"message":"Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: \"FATAL\", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: \"terminating connection due to administrator command\", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some(\"postgres.c\"), line: Some(3211), routine: Some(\"ProcessInterrupts\") }) }"},"target":"quaint::connector::postgres::native"}
+{"timestamp":"2025-10-19T13:47:36.058999Z","level":"ERROR","fields":{"message":"Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: \"FATAL\", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: \"terminating connection due to administrator command\", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some(\"postgres.c\"), line: Some(3211), routine: Some(\"ProcessInterrupts\") }) }"},"target":"quaint::connector::postgres::native"}
+{"timestamp":"2025-10-19T13:47:36.059870Z","level":"ERROR","fields":{"message":"Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: \"FATAL\", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: \"terminating connection due to administrator command\", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some(\"postgres.c\"), line: Some(3211), routine: Some(\"ProcessInterrupts\") }) }"},"target":"quaint::connector::postgres::native"}
+{"timestamp":"2025-10-19T13:47:36.059986Z","level":"ERROR","fields":{"message":"Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: \"FATAL\", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: \"terminating connection due to administrator command\", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some(\"postgres.c\"), line: Some(3211), routine: Some(\"ProcessInterrupts\") }) }"},"target":"quaint::connector::postgres::native"}
+:39824 - "GET /v2/model/info?include_team_models=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /team/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /get_image HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39798 - "GET /organization/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /index.txt?_rsc=121a5 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:39812 - "GET /v2/model/info?include_team_models=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /model/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /model/streaming_metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /health/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /v2/model/info?include_team_models=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /v2/model/info?include_team_models=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /model/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /health/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /model/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /model/metrics?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /model/metrics/exceptions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /health/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /model/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /model/metrics?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /health/latest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /model/metrics?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /model/streaming_metrics?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /model/metrics/slow_responses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /model/streaming_metrics?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /model/metrics?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /model/streaming_metrics?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /model/metrics/exceptions?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /model/metrics/exceptions?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /model/streaming_metrics?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /model/metrics/exceptions?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /model/metrics/slow_responses?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /model/metrics/exceptions?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /model/metrics/slow_responses?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /model/metrics/slow_responses?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /global/activity/exceptions?start_date=2025-10-11&end_date=2025-10-18&model_group=agentrouter/claude-sonnet-4-20250514 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /global/activity/exceptions?start_date=2025-10-11&end_date=2025-10-18&model_group=agentrouter/claude-sonnet-4-20250514 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /model/metrics/slow_responses?_selected_model_group=agentrouter/claude-sonnet-4-20250514&startTime=2025-10-11T03:37:16.635Z&endTime=2025-10-18T03:37:16.635Z&api_key=undefined&customer=null HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /global/activity/exceptions?start_date=2025-10-11&end_date=2025-10-18&model_group=agentrouter/claude-sonnet-4-20250514 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /global/activity/exceptions/deployment?start_date=2025-10-11&end_date=2025-10-18&model_group=agentrouter/claude-sonnet-4-20250514 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /global/activity/exceptions/deployment?start_date=2025-10-11&end_date=2025-10-18&model_group=agentrouter/claude-sonnet-4-20250514 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /global/activity/exceptions?start_date=2025-10-11&end_date=2025-10-18&model_group=agentrouter/claude-sonnet-4-20250514 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /customer/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /global/activity/exceptions/deployment?start_date=2025-10-11&end_date=2025-10-18&model_group=agentrouter/claude-sonnet-4-20250514 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /global/activity/exceptions/deployment?start_date=2025-10-11&end_date=2025-10-18&model_group=agentrouter/claude-sonnet-4-20250514 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /customer/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /customer/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /get/config/callbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /customer/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /get/config/callbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /get/config/callbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /get/config/callbacks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39788 - "GET /ui/assets/logos/aiml_api.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39772 - "GET /ui/assets/logos/anthropic.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/cerebras.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39798 - "GET /ui/assets/logos/assemblyai_small.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "GET /ui/assets/logos/bedrock.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39824 - "GET /ui/assets/logos/microsoft_azure.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39772 - "GET /ui/assets/logos/dashscope.svg HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/cohere.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39772 - "GET /ui/assets/logos/databricks.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/deepinfra.png HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39772 - "GET /ui/assets/logos/voyage.webp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39824 - "GET /ui/assets/logos/voyage.webp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39772 - "GET /ui/assets/logos/bedrock.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39772 - "GET /ui/assets/logos/openrouter.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43966 - "GET /schedule/model_cost_map_reload/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43970 - "POST /health/test_connection HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55348 - "POST /health/test_connection HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47408 - "GET /schedule/model_cost_map_reload/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50636 - "GET /schedule/model_cost_map_reload/status HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [628832]

@@ -1,0 +1,15 @@
+litellm_settings:
+  drop_params: true
+  model_group_settings:
+    forward_client_headers_to_llm_api:
+      - agentrouter/*
+
+# Development Config - Use custom UI build
+general_settings:
+  # UI access mode
+  ui_access_mode: admin
+
+  forward_client_headers_to_llm_api: true
+
+  # Enable debug logging
+  set_verbose: true
