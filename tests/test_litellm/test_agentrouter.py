@@ -620,3 +620,700 @@ async def test_agentrouter_deepseek_with_system_message(respx_mock: respx.MockRo
     assert len(body["messages"]) == 2
     assert body["messages"][0]["role"] == "system"
 
+
+@pytest.mark.asyncio
+async def test_agentrouter_claude_with_function_calling_non_streaming(respx_mock: respx.MockRouter):
+    """
+    Cross-model test: Verify Claude models handle function calling correctly in non-streaming mode.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    route = respx_mock.post("https://agentrouter.org/v1/messages").respond(
+        json={
+            "id": "msg_123",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-3-5-haiku-20241022",
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "toolu_01",
+                    "name": "get_weather",
+                    "input": {"location": "San Francisco", "unit": "celsius"}
+                }
+            ],
+            "stop_reason": "tool_use",
+            "usage": {"input_tokens": 50, "output_tokens": 30},
+        }
+    )
+
+    messages = [{"role": "user", "content": "What's the weather in San Francisco?"}]
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the current weather",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {"type": "string", "description": "City name"},
+                        "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
+                    },
+                    "required": ["location"]
+                }
+            }
+        }
+    ]
+
+    response = await litellm.acompletion(
+        model="agentrouter/claude-3-5-haiku-20241022",
+        messages=messages,
+        tools=tools,
+        max_tokens=100,
+    )
+
+    # Verify endpoint called
+    assert route.called
+
+    # Verify tool calls are properly converted to OpenAI format
+    assert response.choices[0].message.tool_calls is not None
+    assert len(response.choices[0].message.tool_calls) == 1
+    tool_call = response.choices[0].message.tool_calls[0]
+    assert tool_call.function.name == "get_weather"
+    assert "San Francisco" in tool_call.function.arguments
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_openai_model_uses_correct_headers(respx_mock: respx.MockRouter):
+    """
+    Cross-model test: Verify OpenAI models use Authorization header, NOT x-api-key.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Hello!"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+        }
+    )
+
+    messages = [{"role": "user", "content": "Hi"}]
+    response = await litellm.acompletion(
+        model="agentrouter/gpt-5",
+        messages=messages,
+        api_key="test-agentrouter-key",
+    )
+
+    assert route.called
+    req = respx_mock.calls[0].request
+
+    # OpenAI models should use Authorization header
+    assert "authorization" in req.headers or "Authorization" in req.headers
+    auth_header = req.headers.get("authorization") or req.headers.get("Authorization")
+    assert auth_header.startswith("Bearer ")
+
+    # Should NOT use x-api-key
+    assert "x-api-key" not in req.headers.keys()
+    assert "X-Api-Key" not in req.headers.keys()
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_claude_model_uses_correct_headers(respx_mock: respx.MockRouter):
+    """
+    Cross-model test: Verify Claude models use x-api-key header, NOT Authorization.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    route = respx_mock.post("https://agentrouter.org/v1/messages").respond(
+        json={
+            "id": "msg_123",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-3-5-haiku-20241022",
+            "content": [{"type": "text", "text": "Hello!"}],
+            "stop_reason": "end_turn",
+            "usage": {"input_tokens": 5, "output_tokens": 7},
+        }
+    )
+
+    messages = [{"role": "user", "content": "Hi"}]
+    response = await litellm.acompletion(
+        model="agentrouter/claude-3-5-haiku-20241022",
+        messages=messages,
+        max_tokens=10,
+        api_key="test-agentrouter-key",
+    )
+
+    assert route.called
+    req = respx_mock.calls[0].request
+
+    # Claude models should use x-api-key header
+    assert "x-api-key" in req.headers or "X-Api-Key" in req.headers
+
+    # Should NOT use Authorization header
+    assert "authorization" not in req.headers.keys()
+    assert "Authorization" not in req.headers.keys()
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_deepseek_model_routing(respx_mock: respx.MockRouter):
+    """
+    Cross-model test: Verify DeepSeek models route to /v1/chat/completions, not /v1/messages.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    # Mock correct endpoint
+    correct_route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "deepseek-v3.1",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "DeepSeek response"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+        }
+    )
+
+    # Mock wrong endpoint (should NOT be called)
+    wrong_route = respx_mock.post("https://agentrouter.org/v1/messages").respond(
+        status_code=404,
+        json={"error": "Wrong endpoint"}
+    )
+
+    messages = [{"role": "user", "content": "Hi"}]
+    response = await litellm.acompletion(
+        model="agentrouter/deepseek-v3.1",
+        messages=messages,
+    )
+
+    # Verify correct endpoint called
+    assert correct_route.called
+    assert not wrong_route.called
+    assert response.choices[0].message.content == "DeepSeek response"
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_xai_grok_model_routing(respx_mock: respx.MockRouter):
+    """
+    Cross-model test: Verify XAI/Grok models route to /v1/chat/completions, not /v1/messages.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    # Mock correct endpoint
+    correct_route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "grok-2",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Grok response"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+        }
+    )
+
+    # Mock wrong endpoint (should NOT be called)
+    wrong_route = respx_mock.post("https://agentrouter.org/v1/messages").respond(
+        status_code=404,
+        json={"error": "Wrong endpoint"}
+    )
+
+    messages = [{"role": "user", "content": "Hi"}]
+    response = await litellm.acompletion(
+        model="agentrouter/grok-2",
+        messages=messages,
+    )
+
+    # Verify correct endpoint called
+    assert correct_route.called
+    assert not wrong_route.called
+    assert response.choices[0].message.content == "Grok response"
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_model_name_cleaning(respx_mock: respx.MockRouter):
+    """
+    Cross-model test: Verify model names are cleaned (provider prefix removed) before sending to API.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Response"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+        }
+    )
+
+    messages = [{"role": "user", "content": "Hi"}]
+    response = await litellm.acompletion(
+        model="agentrouter/gpt-5",  # With prefix
+        messages=messages,
+    )
+
+    assert route.called
+    req = respx_mock.calls[0].request
+    body = json.loads(req.read())
+
+    # Model name should be cleaned (prefix removed)
+    assert body["model"] == "gpt-5"
+    assert "agentrouter/" not in body["model"]
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_wrong_endpoint_usage_error(respx_mock: respx.MockRouter):
+    """
+    Test auto-conversion: using /v1/messages (Anthropic endpoint) with gpt-5 (OpenAI model).
+
+    Flow:
+    1. User calls litellm.anthropic_messages() with agentrouter/gpt-5
+    2. AgentRouter detects this is OpenAI model
+    3. Converts Anthropic request → OpenAI request
+    4. Calls AgentRouter /v1/chat/completions
+    5. Converts OpenAI response → Anthropic response
+    6. Returns Anthropic format to user
+    """
+    litellm.disable_aiohttp_transport = True
+
+    # Mock AgentRouter /v1/chat/completions (OpenAI endpoint)
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Hello from GPT-5!"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+        }
+    )
+
+    # User calls with Anthropic format
+    messages = [{"role": "user", "content": [{"type": "text", "text": "Hi"}]}]
+    response = await litellm.anthropic_messages(
+        model="agentrouter/gpt-5",  # OpenAI model
+        messages=messages,  # Anthropic format
+        max_tokens=10,
+    )
+
+    # Verify AgentRouter /v1/chat/completions was called (NOT /v1/messages)
+    assert route.called
+    req = respx_mock.calls[0].request
+    assert req.url.path.endswith("/v1/chat/completions")
+
+    # Verify request was converted to OpenAI format
+    import json as json_module
+    body = json_module.loads(req.read())
+    assert body["model"] == "gpt-5"
+    # Messages should be converted to OpenAI format (simple string content)
+    assert isinstance(body["messages"][0]["content"], str)
+    assert body["messages"][0]["content"] == "Hi"
+
+    # Verify response is in Anthropic format
+    assert response["type"] == "message"
+    assert response["role"] == "assistant"
+    assert isinstance(response["content"], list)
+    assert response["content"][0]["type"] == "text"
+    assert response["content"][0]["text"] == "Hello from GPT-5!"
+    assert "usage" in response
+    assert "input_tokens" in response["usage"]
+    assert "output_tokens" in response["usage"]
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_cross_format_anthropic_endpoint_with_deepseek(respx_mock: respx.MockRouter):
+    """
+    Cross-format test: Anthropic endpoint with DeepSeek model.
+    Verifies DeepSeek-specific config is used during conversion.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "deepseek-v3.1",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "DeepSeek response"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+        }
+    )
+
+    messages = [{"role": "user", "content": [{"type": "text", "text": "Hello"}]}]
+    response = await litellm.anthropic_messages(
+        model="agentrouter/deepseek-v3.1",
+        messages=messages,
+        max_tokens=100,
+    )
+
+    assert route.called
+    assert response["type"] == "message"
+    assert response["content"][0]["text"] == "DeepSeek response"
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_cross_format_anthropic_endpoint_with_xai(respx_mock: respx.MockRouter):
+    """
+    Cross-format test: Anthropic endpoint with XAI/Grok model.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "grok-2",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Grok response with humor!"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+        }
+    )
+
+    messages = [{"role": "user", "content": [{"type": "text", "text": "Tell me a joke"}]}]
+    response = await litellm.anthropic_messages(
+        model="agentrouter/grok-2",
+        messages=messages,
+        max_tokens=100,
+    )
+
+    assert route.called
+    assert response["content"][0]["text"] == "Grok response with humor!"
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_cross_format_with_tool_calls(respx_mock: respx.MockRouter):
+    """
+    Cross-format test: Anthropic endpoint with OpenAI model + tool calls.
+    Verifies tool calls are converted correctly in both directions.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "call_123",
+                                "type": "function",
+                                "function": {
+                                    "name": "get_weather",
+                                    "arguments": '{"location": "San Francisco", "unit": "celsius"}'
+                                }
+                            }
+                        ]
+                    },
+                    "finish_reason": "tool_calls",
+                }
+            ],
+            "usage": {"prompt_tokens": 50, "completion_tokens": 30, "total_tokens": 80},
+        }
+    )
+
+    messages = [{"role": "user", "content": [{"type": "text", "text": "What's the weather in SF?"}]}]
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get weather for a location",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "location": {"type": "string"},
+                    "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
+                },
+                "required": ["location"]
+            }
+        }
+    ]
+
+    response = await litellm.anthropic_messages(
+        model="agentrouter/gpt-5",
+        messages=messages,
+        tools=tools,
+        max_tokens=100,
+    )
+
+    assert route.called
+
+    # Verify request conversion: Anthropic tools → OpenAI tools
+    req = respx_mock.calls[0].request
+    body = json.loads(req.read())
+    assert "tools" in body
+    assert body["tools"][0]["type"] == "function"
+    assert body["tools"][0]["function"]["name"] == "get_weather"
+
+    # Verify response conversion: OpenAI tool_calls → Anthropic tool_use
+    assert response["stop_reason"] == "tool_use"
+    assert len(response["content"]) == 1
+    assert response["content"][0]["type"] == "tool_use"
+    assert response["content"][0]["id"] == "call_123"
+    assert response["content"][0]["name"] == "get_weather"
+    assert response["content"][0]["input"]["location"] == "San Francisco"
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_cross_format_finish_reason_mapping(respx_mock: respx.MockRouter):
+    """
+    Cross-format test: Verify finish_reason mapping from OpenAI to Anthropic.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    test_cases = [
+        ("stop", "end_turn"),
+        ("length", "max_tokens"),
+        ("tool_calls", "tool_use"),
+        ("content_filter", "end_turn"),
+    ]
+
+    for openai_reason, anthropic_reason in test_cases:
+        respx_mock.calls.clear()
+
+        route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+            json={
+                "id": "chatcmpl-123",
+                "object": "chat.completion",
+                "created": 1677652288,
+                "model": "gpt-5",
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": "Test"},
+                        "finish_reason": openai_reason,
+                    }
+                ],
+                "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+            }
+        )
+
+        messages = [{"role": "user", "content": [{"type": "text", "text": "Test"}]}]
+        response = await litellm.anthropic_messages(
+            model="agentrouter/gpt-5",
+            messages=messages,
+            max_tokens=10,
+        )
+
+        assert response["stop_reason"] == anthropic_reason, f"Failed for {openai_reason} → {anthropic_reason}"
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_cross_format_multiple_text_blocks(respx_mock: respx.MockRouter):
+    """
+    Cross-format test: Multiple text blocks in Anthropic format should be joined.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Response"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+        }
+    )
+
+    # Multiple text blocks
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "First part. "},
+                {"type": "text", "text": "Second part. "},
+                {"type": "text", "text": "Third part."}
+            ]
+        }
+    ]
+
+    response = await litellm.anthropic_messages(
+        model="agentrouter/gpt-5",
+        messages=messages,
+        max_tokens=100,
+    )
+
+    assert route.called
+
+    # Verify text blocks were joined
+    req = respx_mock.calls[0].request
+    body = json.loads(req.read())
+    assert body["messages"][0]["content"] == "First part. Second part. Third part."
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_cross_format_with_system_message(respx_mock: respx.MockRouter):
+    """
+    Cross-format test: System messages in Anthropic format.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "I am a helpful assistant."},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 20, "completion_tokens": 10, "total_tokens": 30},
+        }
+    )
+
+    messages = [
+        {"role": "user", "content": [{"type": "text", "text": "Who are you?"}]}
+    ]
+
+    # Anthropic uses 'system' parameter, not a system message
+    response = await litellm.anthropic_messages(
+        model="agentrouter/gpt-5",
+        messages=messages,
+        system="You are a helpful assistant.",
+        max_tokens=100,
+    )
+
+    assert route.called
+    assert response["content"][0]["text"] == "I am a helpful assistant."
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_cross_format_empty_content(respx_mock: respx.MockRouter):
+    """
+    Cross-format test: Handle empty/null content gracefully.
+    """
+    litellm.disable_aiohttp_transport = True
+
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": ""},  # Empty content
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 0, "total_tokens": 9},
+        }
+    )
+
+    messages = [{"role": "user", "content": [{"type": "text", "text": "Test"}]}]
+    response = await litellm.anthropic_messages(
+        model="agentrouter/gpt-5",
+        messages=messages,
+        max_tokens=100,
+    )
+
+    assert route.called
+    # Should handle empty content gracefully
+    assert isinstance(response["content"], list)
+
+
+@pytest.mark.asyncio
+async def test_agentrouter_cross_format_usage_tokens_mapping(respx_mock: respx.MockRouter):
+    """
+    Cross-format test: Verify usage tokens are mapped correctly.
+    OpenAI: prompt_tokens, completion_tokens
+    Anthropic: input_tokens, output_tokens
+    """
+    litellm.disable_aiohttp_transport = True
+
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Test"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 123, "completion_tokens": 456, "total_tokens": 579},
+        }
+    )
+
+    messages = [{"role": "user", "content": [{"type": "text", "text": "Test"}]}]
+    response = await litellm.anthropic_messages(
+        model="agentrouter/gpt-5",
+        messages=messages,
+        max_tokens=100,
+    )
+
+    assert route.called
+    assert response["usage"]["input_tokens"] == 123
+    assert response["usage"]["output_tokens"] == 456
+
+
+
+

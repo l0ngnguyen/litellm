@@ -379,3 +379,372 @@ async def test_proxy_agentrouter_with_function_calling(
     # Check that tool calls are properly formatted in response
     assert "choices" in data
     assert len(data["choices"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_proxy_agentrouter_cross_model_headers_verification(
+    client_agentrouter: TestClient, respx_mock: respx.MockRouter
+):
+    """
+    Cross-model test: Verify that Claude models use x-api-key and OpenAI models use Authorization.
+    """
+    # Test 1: Claude model should use x-api-key
+    claude_route = respx_mock.post("https://agentrouter.org/v1/messages").respond(
+        json={
+            "id": "msg_123",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-3-5-haiku-20241022",
+            "content": [{"type": "text", "text": "Claude response"}],
+            "stop_reason": "end_turn",
+            "usage": {"input_tokens": 5, "output_tokens": 7},
+        }
+    )
+
+    headers = {"Authorization": "Bearer sk-test-master"}
+    payload = {
+        "model": "agentrouter/claude-3-5-haiku-20241022",
+        "messages": [{"role": "user", "content": "Hi"}],
+        "max_tokens": 16,
+    }
+
+    resp = client_agentrouter.post("/v1/chat/completions", json=payload, headers=headers)
+    assert resp.status_code == 200
+    assert claude_route.called
+
+    # Verify Claude request has x-api-key, NOT Authorization
+    claude_req = respx_mock.calls[0].request
+    assert ("x-api-key" in claude_req.headers) or ("X-Api-Key" in claude_req.headers)
+    assert ("authorization" not in claude_req.headers) and ("Authorization" not in claude_req.headers)
+
+    # Reset mock
+    respx_mock.calls.clear()
+
+    # Test 2: OpenAI model should use Authorization
+    openai_route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "GPT response"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+        }
+    )
+
+    payload = {
+        "model": "agentrouter/gpt-5",
+        "messages": [{"role": "user", "content": "Hi"}],
+    }
+
+    resp = client_agentrouter.post("/v1/chat/completions", json=payload, headers=headers)
+    assert resp.status_code == 200
+    assert openai_route.called
+
+    # Verify OpenAI request has Authorization, NOT x-api-key
+    openai_req = respx_mock.calls[0].request  # Index 0 after clear
+    assert ("authorization" in openai_req.headers) or ("Authorization" in openai_req.headers)
+    assert not (("x-api-key" in openai_req.headers) or ("X-Api-Key" in openai_req.headers))
+
+
+@pytest.mark.asyncio
+async def test_proxy_agentrouter_wrong_endpoint_for_model_type(
+    client_agentrouter: TestClient, respx_mock: respx.MockRouter
+):
+    """
+    Cross-model test: Verify routing logic prevents wrong endpoint usage.
+    Claude -> /v1/messages only
+    OpenAI -> /v1/chat/completions only
+    """
+    # Mock both endpoints
+    messages_route = respx_mock.post("https://agentrouter.org/v1/messages").respond(
+        json={
+            "id": "msg_123",
+            "type": "message",
+            "role": "assistant",
+            "model": "claude-3-5-haiku-20241022",
+            "content": [{"type": "text", "text": "Response"}],
+            "stop_reason": "end_turn",
+            "usage": {"input_tokens": 5, "output_tokens": 7},
+        }
+    )
+
+    chat_completions_route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Response"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+        }
+    )
+
+    headers = {"Authorization": "Bearer sk-test-master"}
+
+    # Test 1: Claude model should route to /v1/messages
+    payload = {
+        "model": "agentrouter/claude-3-5-haiku-20241022",
+        "messages": [{"role": "user", "content": "Hi"}],
+        "max_tokens": 16,
+    }
+
+    resp = client_agentrouter.post("/v1/chat/completions", json=payload, headers=headers)
+    assert resp.status_code == 200
+    assert messages_route.called
+    assert respx_mock.calls[0].request.url.path.endswith("/v1/messages")
+
+    # Reset
+    respx_mock.calls.clear()
+
+    # Test 2: OpenAI model should route to /v1/chat/completions
+    payload = {
+        "model": "agentrouter/gpt-5",
+        "messages": [{"role": "user", "content": "Hi"}],
+    }
+
+    resp = client_agentrouter.post("/v1/chat/completions", json=payload, headers=headers)
+    assert resp.status_code == 200
+    assert chat_completions_route.called
+    assert respx_mock.calls[0].request.url.path.endswith("/v1/chat/completions")
+
+
+@pytest.mark.asyncio
+async def test_proxy_agentrouter_model_prefix_cleaning(
+    client_agentrouter: TestClient, respx_mock: respx.MockRouter
+):
+    """
+    Cross-model test: Verify model names have provider prefix removed before API call.
+    """
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "deepseek-v3.1",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Response"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+        }
+    )
+
+    headers = {"Authorization": "Bearer sk-test-master"}
+    payload = {
+        "model": "agentrouter/deepseek-v3.1",  # With prefix
+        "messages": [{"role": "user", "content": "Hi"}],
+    }
+
+    resp = client_agentrouter.post("/v1/chat/completions", json=payload, headers=headers)
+    assert resp.status_code == 200
+    assert route.called
+
+    # Verify model name was cleaned (prefix removed)
+    upstream_req = respx_mock.calls[0].request
+    import json as json_module
+    body = json_module.loads(upstream_req.read())
+    assert body["model"] == "deepseek-v3.1"
+    assert "agentrouter/" not in body["model"]
+
+
+@pytest.mark.asyncio
+async def test_proxy_agentrouter_cross_format_anthropic_messages_with_openai_model(
+    client_agentrouter: TestClient, respx_mock: respx.MockRouter
+):
+    """
+    Proxy cross-format test: Call /v1/messages with OpenAI model (gpt-5).
+    Should auto-convert to OpenAI format.
+    """
+    # Mock OpenAI endpoint
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": "Hello from GPT-5 via cross-format!"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 15, "total_tokens": 25},
+        }
+    )
+
+    headers = {"Authorization": "Bearer sk-test-master"}
+    # User sends Anthropic Messages API request
+    payload = {
+        "model": "agentrouter/gpt-5",
+        "messages": [{"role": "user", "content": [{"type": "text", "text": "Hi"}]}],
+        "max_tokens": 100,
+    }
+
+    # Call /v1/messages endpoint (Anthropic format)
+    resp = client_agentrouter.post("/v1/messages", json=payload, headers=headers)
+    assert resp.status_code == 200
+    assert route.called
+
+    # Verify upstream was called with OpenAI format
+    upstream_req = respx_mock.calls[0].request
+    assert upstream_req.url.path.endswith("/v1/chat/completions")  # NOT /v1/messages
+
+    # Verify response is in Anthropic format
+    data = resp.json()
+    assert data["type"] == "message"
+    assert data["role"] == "assistant"
+    assert data["content"][0]["type"] == "text"
+    assert "Hello from GPT-5" in data["content"][0]["text"]
+    assert "input_tokens" in data["usage"]
+    assert "output_tokens" in data["usage"]
+
+
+@pytest.mark.asyncio
+async def test_proxy_agentrouter_cross_format_with_tool_calling(
+    client_agentrouter: TestClient, respx_mock: respx.MockRouter
+):
+    """
+    Proxy cross-format test: Tool calling with cross-format conversion.
+    """
+    route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+        json={
+            "id": "chatcmpl-123",
+            "object": "chat.completion",
+            "created": 1677652288,
+            "model": "gpt-5",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "call_weather_123",
+                                "type": "function",
+                                "function": {
+                                    "name": "get_weather",
+                                    "arguments": '{"location": "Tokyo", "unit": "celsius"}'
+                                }
+                            }
+                        ]
+                    },
+                    "finish_reason": "tool_calls",
+                }
+            ],
+            "usage": {"prompt_tokens": 60, "completion_tokens": 40, "total_tokens": 100},
+        }
+    )
+
+    headers = {"Authorization": "Bearer sk-test-master"}
+    payload = {
+        "model": "agentrouter/gpt-5",
+        "messages": [{"role": "user", "content": [{"type": "text", "text": "What's the weather in Tokyo?"}]}],
+        "max_tokens": 200,
+        "tools": [
+            {
+                "name": "get_weather",
+                "description": "Get weather for a location",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "location": {"type": "string"},
+                        "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
+                    },
+                    "required": ["location"]
+                }
+            }
+        ]
+    }
+
+    resp = client_agentrouter.post("/v1/messages", json=payload, headers=headers)
+    assert resp.status_code == 200
+    assert route.called
+
+    data = resp.json()
+    # Verify tool_use in Anthropic format
+    assert data["stop_reason"] == "tool_use"
+    assert len(data["content"]) > 0
+    tool_use_block = next((c for c in data["content"] if c["type"] == "tool_use"), None)
+    assert tool_use_block is not None
+    assert tool_use_block["name"] == "get_weather"
+    assert tool_use_block["input"]["location"] == "Tokyo"
+
+
+@pytest.mark.asyncio
+async def test_proxy_agentrouter_cross_format_all_models(
+    client_agentrouter: TestClient, respx_mock: respx.MockRouter, monkeypatch
+):
+    """
+    Proxy cross-format test: Verify all non-Claude models work via /v1/messages.
+    """
+    import litellm.proxy.proxy_server as proxy_server_mod
+    from litellm.proxy.management_endpoints import model_management_endpoints
+
+    proxy_server_mod.prisma_client = object()
+    monkeypatch.setattr(
+        model_management_endpoints.ModelManagementAuthChecks,
+        "can_user_make_model_call",
+        AsyncMock(return_value=None),
+    )
+
+    test_models = [
+        "agentrouter/gpt-5",
+        "agentrouter/deepseek-v3.1",
+        "agentrouter/grok-2",
+    ]
+
+    for model in test_models:
+        respx_mock.calls.clear()
+
+        clean_model = model.split("/", 1)[-1]
+        route = respx_mock.post("https://agentrouter.org/v1/chat/completions").respond(
+            json={
+                "id": "chatcmpl-123",
+                "object": "chat.completion",
+                "created": 1677652288,
+                "model": clean_model,
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": f"Response from {clean_model}"},
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": {"prompt_tokens": 9, "completion_tokens": 12, "total_tokens": 21},
+            }
+        )
+
+        headers = {"Authorization": "Bearer sk-test-master"}
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": [{"type": "text", "text": "Test"}]}],
+            "max_tokens": 100,
+        }
+
+        resp = client_agentrouter.post("/v1/messages", json=payload, headers=headers)
+        assert resp.status_code == 200, f"Failed for {model}"
+        assert route.called, f"Route not called for {model}"
+
+        data = resp.json()
+        assert data["type"] == "message", f"Wrong type for {model}"
+        assert data["content"][0]["text"] == f"Response from {clean_model}", f"Wrong content for {model}"
+
+
