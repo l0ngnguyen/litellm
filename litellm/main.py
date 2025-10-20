@@ -2017,6 +2017,66 @@ def completion(  # type: ignore # noqa: PLR0915
             logging.post_call(
                 input=messages, api_key=api_key, original_response=response
             )
+        elif custom_llm_provider == "agentrouter":
+            api_base = (
+                api_base
+                or litellm.api_base
+                or get_secret_str("AGENTROUTER_API_BASE")
+                or "https://agentrouter.org/v1"  # Default with /v1
+            )
+
+            # Ensure api_base has /v1 for AgentRouter
+            if api_base and not api_base.endswith("/v1"):
+                api_base = f"{api_base.rstrip('/')}/v1"
+
+            api_key = (
+                api_key
+                or litellm.api_key
+                or get_secret("AGENTROUTER_API_KEY")
+                or get_secret("AR_API_KEY")
+            )
+
+            # Merge headers and ensure User-Agent is set
+            _headers = headers or litellm.headers or {}
+            headers = _headers
+
+            # Load any provider-specific config overrides
+            transformation_config = litellm.AgentrouterConfig(model=model)
+            config = transformation_config.get_config()
+            for k, v in config.items():
+                if k == "extra_body":
+                    if "extra_body" in optional_params:
+                        optional_params[k].update(v)
+                    else:
+                        optional_params[k] = v
+                elif k not in optional_params:
+                    optional_params[k] = v
+
+            if transformation_config.is_anthropic_model and "max_tokens" not in litellm_params:
+                DEFAULT_AGENTROUTER_MAX_TOKENS = 1000
+                if litellm.model_cost and f"{custom_llm_provider}/{model}" in litellm.model_cost:
+                    optional_params["max_tokens"] = litellm.model_cost[model].get("max_tokens", DEFAULT_AGENTROUTER_MAX_TOKENS)
+                else:
+                    optional_params["max_tokens"] = DEFAULT_AGENTROUTER_MAX_TOKENS  # default to 1000 if not set
+
+            response = base_llm_http_handler.completion(
+                model=model,
+                stream=stream,
+                messages=messages,
+                acompletion=acompletion,
+                api_base=api_base,
+                model_response=model_response,
+                optional_params=optional_params,
+                litellm_params=litellm_params,
+                shared_session=shared_session,
+                custom_llm_provider="agentrouter",
+                timeout=timeout,
+                headers=headers,
+                encoding=encoding,
+                api_key=api_key,
+                logging_obj=logging,
+                client=client,
+            )
         elif (
             model in litellm.open_ai_chat_completion_models
             or custom_llm_provider == "custom_openai"
@@ -2666,7 +2726,7 @@ def completion(  # type: ignore # noqa: PLR0915
                 api_base
                 or litellm.api_base
                 or get_secret_str("OPENROUTER_API_BASE")
-                or "https://openrouter.ai/api/v1"
+                or "https://openrouter.ai"
             )
 
             api_key = (
@@ -4184,6 +4244,37 @@ def embedding(  # noqa: PLR0915
                 optional_params=optional_params,
                 client=client,
                 aembedding=aembedding,
+            )
+        elif custom_llm_provider == "agentrouter":
+            # Treat AgentRouter embeddings as OpenAI-compatible embeddings via AgentRouter base
+            api_base = (
+                api_base
+                or litellm.api_base
+                or get_secret_str("AGENTROUTER_API_BASE")
+                or "https://agentrouter.org/v1"
+            )
+            api_key = (
+                api_key
+                or litellm.api_key
+                or get_secret_str("AGENTROUTER_API_KEY")
+            )
+
+            if extra_headers is not None:
+                optional_params["extra_headers"] = extra_headers
+
+            response = openai_chat_completions.embedding(
+                model=model,
+                input=input,
+                api_base=api_base,
+                api_key=api_key,
+                logging_obj=logging,
+                timeout=timeout,
+                model_response=EmbeddingResponse(),
+                optional_params=optional_params,
+                client=client,
+                aembedding=aembedding,
+                max_retries=max_retries,
+                shared_session=shared_session,
             )
         elif (
             custom_llm_provider == "openai_like"
@@ -5754,6 +5845,42 @@ def speech(  # noqa: PLR0915
 
         headers = headers or litellm.headers
 
+        response = openai_chat_completions.audio_speech(
+            model=model,
+            input=input,
+            voice=voice,
+            optional_params=optional_params,
+            api_key=api_key,
+            api_base=api_base,
+            organization=organization,
+            project=project,
+            max_retries=max_retries,
+            timeout=timeout,
+            client=client,  # pass AsyncOpenAI, OpenAI client
+            aspeech=aspeech,
+        )
+    elif custom_llm_provider == "agentrouter":
+        # Treat AgentRouter TTS as OpenAI TTS via AgentRouter base
+        if voice is None or not (isinstance(voice, str)):
+            raise litellm.BadRequestError(
+                message="'voice' is required to be passed as a string for AgentRouter TTS",
+                model=model,
+                llm_provider=custom_llm_provider,
+            )
+
+        api_base = (
+            api_base
+            or litellm.api_base
+            or get_secret_str("AGENTROUTER_API_BASE")
+            or "https://agentrouter.org/v1"
+        )
+        api_key = (
+            api_key
+            or litellm.api_key
+            or get_secret_str("AGENTROUTER_API_KEY")
+        )
+
+        headers = headers or litellm.headers
         response = openai_chat_completions.audio_speech(
             model=model,
             input=input,

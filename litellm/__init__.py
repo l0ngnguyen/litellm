@@ -452,6 +452,7 @@ mistral_chat_models: Set = set()
 text_completion_codestral_models: Set = set()
 anthropic_models: Set = set()
 openrouter_models: Set = set()
+agentrouter_models: Set = set()
 datarobot_models: Set = set()
 vertex_language_models: Set = set()
 vertex_vision_models: Set = set()
@@ -585,6 +586,8 @@ def add_known_models():
             empower_models.add(key)
         elif value.get("litellm_provider") == "openrouter":
             openrouter_models.add(key)
+        elif value.get("litellm_provider") == "agentrouter":
+            agentrouter_models.add(key)
         elif value.get("litellm_provider") == "vercel_ai_gateway":
             vercel_ai_gateway_models.add(key)
         elif value.get("litellm_provider") == "datarobot":
@@ -792,6 +795,7 @@ model_list = list(
     | anthropic_models
     | set(replicate_models)
     | openrouter_models
+    | agentrouter_models
     | datarobot_models
     | set(huggingface_models)
     | vertex_chat_models
@@ -872,6 +876,7 @@ models_by_provider: dict = {
     "together_ai": together_ai_models,
     "baseten": baseten_models,
     "openrouter": openrouter_models,
+    "agentrouter": agentrouter_models,
     "vercel_ai_gateway": vercel_ai_gateway_models,
     "datarobot": datarobot_models,
     "vertex_ai": vertex_chat_models
@@ -1052,6 +1057,7 @@ from .llms.huggingface.embedding.transformation import HuggingFaceEmbeddingConfi
 from .llms.oobabooga.chat.transformation import OobaboogaConfig
 from .llms.maritalk import MaritalkConfig
 from .llms.openrouter.chat.transformation import OpenrouterConfig
+from .llms.agentrouter.chat.transformation import AgentrouterConfig
 from .llms.datarobot.chat.transformation import DataRobotConfig
 from .llms.anthropic.chat.transformation import AnthropicConfig
 from .llms.anthropic.common_utils import AnthropicModelInfo

@@ -7028,6 +7028,8 @@ class ProviderConfigManager:
             return litellm.TogetherAIConfig()
         elif litellm.LlmProviders.OPENROUTER == provider:
             return litellm.OpenrouterConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            return litellm.AgentrouterConfig(model=model)
         elif litellm.LlmProviders.VERCEL_AI_GATEWAY == provider:
             return litellm.VercelAIGatewayConfig()
         elif litellm.LlmProviders.COMETAPI == provider:
@@ -7249,6 +7251,9 @@ class ProviderConfigManager:
             return litellm.DeepinfraRerankConfig()
         elif litellm.LlmProviders.NVIDIA_NIM == provider:
             return litellm.NvidiaNimRerankConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: default to Cohere rerank semantics via AgentRouter base
+            return litellm.CohereRerankConfig()
         elif litellm.LlmProviders.VERTEX_AI == provider:
             return litellm.VertexAIRerankConfig()
         return litellm.CohereRerankConfig()
@@ -7273,6 +7278,8 @@ class ProviderConfigManager:
                 )
 
                 return VertexAIPartnerModelsAnthropicMessagesConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            return litellm.AgentrouterConfig(model=model)
         return None
 
     @staticmethod
@@ -7301,6 +7308,9 @@ class ProviderConfigManager:
             )
 
             return HostedVLLMAudioTranscriptionConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: treat as OpenAI Whisper-style via AgentRouter base
+            return litellm.OpenAIWhisperAudioTranscriptionConfig()
         return None
 
     @staticmethod
@@ -7318,6 +7328,9 @@ class ProviderConfigManager:
                 return litellm.AzureOpenAIResponsesAPIConfig()
         elif litellm.LlmProviders.LITELLM_PROXY == provider:
             return litellm.LiteLLMProxyResponsesAPIConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: treat as OpenAI Responses API via AgentRouter base
+            return litellm.OpenAIResponsesAPIConfig()
         return None
 
     @staticmethod
@@ -7402,6 +7415,9 @@ class ProviderConfigManager:
         provider: LlmProviders,
     ) -> Optional[BaseImageVariationConfig]:
         if LlmProviders.OPENAI == provider:
+            return litellm.OpenAIImageVariationConfig()
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: use OpenAI image variations via AgentRouter base
             return litellm.OpenAIImageVariationConfig()
         elif LlmProviders.TOPAZ == provider:
             return litellm.TopazImageVariationConfig()
@@ -7501,6 +7517,13 @@ class ProviderConfigManager:
             )
 
             return get_openai_image_generation_config(model)
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: use OpenAI image generation semantics via AgentRouter base
+            from litellm.llms.openai.image_generation import (
+                get_openai_image_generation_config,
+            )
+
+            return get_openai_image_generation_config(model)
         elif LlmProviders.AZURE == provider:
             from litellm.llms.azure.image_generation import (
                 get_azure_image_generation_config,
@@ -7569,8 +7592,13 @@ class ProviderConfigManager:
     ) -> Optional[BaseImageEditConfig]:
         if LlmProviders.OPENAI == provider:
             from litellm.llms.openai.image_edit import get_openai_image_edit_config
-
             return get_openai_image_edit_config(model=model)
+        elif litellm.LlmProviders.AGENTROUTER == provider:
+            # Minimal: use OpenAI image edit semantics via AgentRouter base
+            from litellm.llms.openai.image_edit.transformation import (
+                OpenAIImageEditConfig,
+            )
+            return OpenAIImageEditConfig()
         elif LlmProviders.AZURE == provider:
             from litellm.llms.azure.image_edit.transformation import (
                 AzureImageEditConfig,

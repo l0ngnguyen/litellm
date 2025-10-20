@@ -362,6 +362,10 @@ class AnthropicStreamWrapper(AdapterCompletionStreamWrapper):
         """
         from .transformation import LiteLLMAnthropicMessagesAdapter
 
+        # Safety check: skip chunks with no choices
+        if not hasattr(chunk, 'choices') or len(chunk.choices) == 0:
+            return False
+
         # Example logic - customize based on your needs:
         # If chunk indicates a tool call
         if chunk.choices[0].finish_reason is not None:

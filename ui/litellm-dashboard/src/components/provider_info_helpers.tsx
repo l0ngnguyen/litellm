@@ -28,6 +28,7 @@ export enum Providers {
   OpenAI_Text = "OpenAI Text Completion",
   OpenAI_Text_Compatible = "OpenAI-Compatible Text Completion Models (Together AI, etc.)",
   Openrouter = "Openrouter",
+  Agentrouter = "AgentRouter",
   Oracle = "Oracle Cloud Infrastructure (OCI)",
   Perplexity = "Perplexity",
   Sambanova = "Sambanova",
@@ -66,6 +67,7 @@ export const provider_map: Record<string, string> = {
   Perplexity: "perplexity",
   TogetherAI: "together_ai",
   Openrouter: "openrouter",
+  Agentrouter: "agentrouter",
   Oracle: "oci",
   Snowflake: "snowflake",
   FireworksAI: "fireworks_ai",
@@ -109,6 +111,7 @@ export const providerLogoMap: Record<string, string> = {
   [Providers.OpenAI_Text_Compatible]: `${asset_logos_folder}openai_small.svg`,
   [Providers.OpenAI_Compatible]: `${asset_logos_folder}openai_small.svg`,
   [Providers.Openrouter]: `${asset_logos_folder}openrouter.svg`,
+  [Providers.Agentrouter]: `${asset_logos_folder}openrouter.svg`, // Using openrouter logo as placeholder
   [Providers.Oracle]: `${asset_logos_folder}oracle.svg`,
   [Providers.Perplexity]: `${asset_logos_folder}perplexity-ai.svg`,
   [Providers.Sambanova]: `${asset_logos_folder}sambanova.svg`,
@@ -183,6 +186,8 @@ export const getPlaceholder = (selectedProvider: string): string => {
     return "volcengine/<any-model-on-volcengine>";
   } else if (selectedProvider == Providers.DeepInfra) {
     return "deepinfra/<any-model-on-deepinfra>";
+  } else if (selectedProvider == Providers.Agentrouter) {
+    return "agentrouter/claude-3-5-haiku-20241022";
   } else {
     return "gpt-3.5-turbo";
   }
