@@ -441,9 +441,12 @@ const GeneralSettings: React.FC<GeneralSettingsPageProps> = ({ accessToken, user
                                 className="w-full max-w-md"
                                 onValueChange={setSelectedStrategy}
                               >
-                                <SelectItem value="usage-based-routing">usage-based-routing</SelectItem>
-                                <SelectItem value="latency-based-routing">latency-based-routing</SelectItem>
                                 <SelectItem value="simple-shuffle">simple-shuffle</SelectItem>
+                                <SelectItem value="usage-based-routing">usage-based-routing</SelectItem>
+                                <SelectItem value="usage-based-routing-v2">usage-based-routing-v2</SelectItem>
+                                <SelectItem value="latency-based-routing">latency-based-routing</SelectItem>
+                                <SelectItem value="least-busy">least-busy</SelectItem>
+                                <SelectItem value="cost-based-routing">cost-based-routing</SelectItem>
                               </Select2>
                             ) : (
                               <TextInput
