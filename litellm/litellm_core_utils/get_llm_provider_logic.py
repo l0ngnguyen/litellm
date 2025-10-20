@@ -789,6 +789,16 @@ def _get_openai_compatible_provider_info(  # noqa: PLR0915
             or "https://api.inference.wandb.ai/v1"
         )  # type: ignore
         dynamic_api_key = api_key or get_secret_str("WANDB_API_KEY")
+    elif custom_llm_provider == "agentrouter":
+        api_base = (
+            api_base
+            or get_secret("AGENTROUTER_API_BASE")
+            or "https://agentrouter.org/v1"
+        )  # type: ignore
+        # Ensure /v1 is present for AgentRouter
+        if api_base and not api_base.endswith("/v1"):
+            api_base = f"{api_base.rstrip('/')}/v1"
+        dynamic_api_key = api_key or get_secret_str("AGENTROUTER_API_KEY")
     elif custom_llm_provider == "lemonade":
         (
             api_base,

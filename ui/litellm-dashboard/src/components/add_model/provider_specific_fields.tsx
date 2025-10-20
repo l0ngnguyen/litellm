@@ -460,6 +460,14 @@ const PROVIDER_CREDENTIAL_FIELDS: Record<Providers, ProviderCredentialField[]> =
       required: true,
     },
   ],
+  [Providers.Agentrouter]: [
+    {
+      key: "api_key",
+      label: "AgentRouter API Key",
+      type: "password",
+      required: true,
+    },
+  ],
   [Providers.FireworksAI]: [
     {
       key: "api_key",
